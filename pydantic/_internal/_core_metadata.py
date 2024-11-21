@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from pydantic_core import CoreSchema
 
     from ..config import JsonDict, JsonSchemaExtraCallable
+    from ..fields import JsonSchemaOverride
     from ._schema_generation_shared import (
         GetJsonSchemaFunction,
     )
@@ -24,6 +25,7 @@ class CoreMetadata(TypedDict, total=False):
             custom validation function. Only applies to before, plain, and wrap validators.
         pydantic_js_udpates: key / value pair updates to apply to the JSON schema for a type.
         pydantic_js_extra: WIP, either key/value pair updates to apply to the JSON schema, or a custom callable.
+        pydantic_js_schema_override: key / value pair overrides to apply to the JSON schema.
 
     TODO: Perhaps we should move this structure to pydantic-core. At the moment, though,
     it's easier to iterate on if we leave it in pydantic until we feel there is a semi-stable API.
@@ -40,6 +42,7 @@ class CoreMetadata(TypedDict, total=False):
     pydantic_js_input_core_schema: CoreSchema
     pydantic_js_updates: JsonDict
     pydantic_js_extra: JsonDict | JsonSchemaExtraCallable
+    pydantic_js_schema_override: JsonSchemaOverride
 
 
 def update_core_metadata(
@@ -50,6 +53,7 @@ def update_core_metadata(
     pydantic_js_annotation_functions: list[GetJsonSchemaFunction] | None = None,
     pydantic_js_updates: JsonDict | None = None,
     pydantic_js_extra: JsonDict | JsonSchemaExtraCallable | None = None,
+    pydantic_js_schema_override: JsonSchemaOverride | None = None,
 ) -> None:
     from ..json_schema import PydanticJsonSchemaWarning
 
@@ -93,3 +97,12 @@ def update_core_metadata(
         if callable(existing_pydantic_js_extra):
             # if ever there's a case of a callable, we'll just keep the last json schema extra spec
             core_metadata['pydantic_js_extra'] = pydantic_js_extra
+
+    if pydantic_js_schema_override:
+        if (existing_js_schema_override := core_metadata.get('pydantic_js_schema_override')) is not None:
+            core_metadata['pydantic_js_schema_override'] = {
+                **existing_js_schema_override,
+                **pydantic_js_schema_override,
+            }
+        else:
+            core_metadata['pydantic_js_schema_override'] = pydantic_js_schema_override
